@@ -167,11 +167,20 @@ if __name__ == "__main__":
     optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
 
+    noisy_training_fm = True  # todo
     for epoch in range(num_epochs):
         net.train()
         for i, (images, labels) in enumerate(trainloader):
             images = images.to(device)
             labels = labels.to(device)
+
+            # add noise for flow matching
+            if noisy_training_fm:
+                t = torch.rand(images.size(0), device=device)
+                t_repeat = repeat(t, 'b -> b c d e', c=1, d=1, e=1)
+                noise = torch.randn_like(images)
+                sigma_min = 1e-4
+                images = t_repeat * images + (1. - (1 - sigma_min) * t_repeat) * noise
 
             outputs = net(images)
             loss = criterion(outputs, labels)
